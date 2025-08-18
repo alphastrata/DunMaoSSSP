@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !data_path.exists() {
         println!("Wiki-Talk graph not found!");
         println!("Please run: cargo run --bin fetch_data");
-        return Ok(());
+        return Ok(())
     }
 
     println!("Loading Wiki-Talk dataset...");
@@ -33,35 +33,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     */
 
     println!(
-        "{:<8} {:<15} {:<15} {:<12.2}",
-        "Source", "Dijkstra (ms)", "New Algo (ms)", "Speedup"
+        "{:<8} {:<8} {:<15} {:<15} {:<12.2}",
+        "Source", "Goal", "Dijkstra (ms)", "New Algo (ms)", "Speedup"
     );
-    println!("{}", "-".repeat(55));
-
-    // Reuse the same graphs for all sssp measures.
-    let mut solver1 = SSSpSolver::new(graph.clone());
-    let mut solver2 = SSSpSolver::new(graph.clone());
+    println!("{}", "-".repeat(65));
 
     // Test on a subset of source vertices
-    let test_sources = vec![0, 100, 1000, 5000];
+    let test_pairs = vec![(0, 20000), (100, 30000), (1000, 40000), (5000, 50000)];
 
-    for &source in &test_sources {
-        if source >= graph.vertices {
+    for &(source, goal) in &test_pairs {
+        if source >= graph.vertices || goal >= graph.vertices {
             continue;
         }
 
         // Benchmark Dijkstra
+        let mut solver1 = SSSpSolver::new(graph.clone());
         let start = Instant::now();
-        let distances1 = solver1.dijkstra(source);
+        let result1 = solver1.dijkstra(source, Some(goal));
         let dijkstra_time = start.elapsed().as_millis();
 
         // VS the new
+        let mut solver2 = SSSpSolver::new(graph.clone());
         let start = Instant::now();
-        let distances2 = solver2.solve(source);
+        let result2 = solver2.solve(source, goal);
         let new_algo_time = start.elapsed().as_millis();
 
-        assert_eq!(distances2.len(), distances1.len()); // Should be the same.
-        black_box((_distances1, _distances2)); // JIC rustc tries to be too clever.
+        black_box((result1, result2)); // JIC rustc tries to be too clever.
 
         let speedup = if new_algo_time > 0 {
             dijkstra_time as f64 / new_algo_time as f64
@@ -70,8 +67,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         println!(
-            "{:<8} {:<15} {:<15} {:<12.2}x",
-            source, dijkstra_time, new_algo_time, speedup
+            "{:<8} {:<8} {:<15} {:<15} {:<12.2}x",
+            source, goal, dijkstra_time, new_algo_time, speedup
         );
     }
 

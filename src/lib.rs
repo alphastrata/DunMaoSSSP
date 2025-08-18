@@ -112,13 +112,13 @@ impl SSSpSolver {
         }
     }
 
-    pub fn solve(&mut self, source: usize) -> Vec<f64> {
+    pub fn solve(&mut self, source: usize, goal: usize) -> Option<(f64, Vec<usize>)> {
         self.distances[source] = 0.0;
         self.complete[source] = true;
 
         // For small graphs, use simple Dijkstra
         if self.graph.vertices <= 10 {
-            return self.dijkstra(source);
+            return self.dijkstra(source, Some(goal));
         }
 
         let max_level = ((self.graph.vertices as f64).ln() / self.t as f64).ceil() as usize;
@@ -144,6 +144,10 @@ impl SSSpSolver {
             distance: dist,
         })) = heap.pop()
         {
+            if u == goal {
+                break; // Goal reached
+            }
+
             if dist > self.distances[u] {
                 continue;
             }
@@ -165,10 +169,31 @@ impl SSSpSolver {
             });
         }
 
-        self.distances.clone()
+        if self.distances[goal] == f64::INFINITY {
+            None
+        } else {
+            Some((self.distances[goal], self.reconstruct_path(source, goal)))
+        }
     }
 
-    pub fn dijkstra(&mut self, source: usize) -> Vec<f64> {
+    fn reconstruct_path(&self, source: usize, goal: usize) -> Vec<usize> {
+        let mut path = Vec::new();
+        let mut current = goal;
+        while current != source {
+            path.push(current);
+            if let Some(pred) = self.predecessors[current] {
+                current = pred;
+            } else {
+                // Should not happen if a path exists
+                return Vec::new();
+            }
+        }
+        path.push(source);
+        path.reverse();
+        path
+    }
+
+    pub fn dijkstra(&mut self, source: usize, goal: Option<usize>) -> Option<(f64, Vec<usize>)> {
         let mut heap = BinaryHeap::new();
         self.distances[source] = 0.0;
         heap.push(Reverse(VertexDistance {
@@ -181,6 +206,12 @@ impl SSSpSolver {
             distance: dist,
         })) = heap.pop()
         {
+            if let Some(g) = goal
+                && u == g
+            {
+                break; // Goal reached
+            }
+
             if dist > self.distances[u] {
                 continue;
             }
@@ -202,7 +233,24 @@ impl SSSpSolver {
             });
         }
 
-        self.distances.clone()
+        if let Some(g) = goal {
+            if self.distances[g] == f64::INFINITY {
+                None
+            } else {
+                Some((self.distances[g], self.reconstruct_path(source, g)))
+            }
+        } else {
+            //FIXME:
+            // This branch is for the old behavior, returning all distances.
+            // It's not used by the new `solve` method but is kept for compatibility with old tests for now.
+            // A better approach would be to have a separate method for all distances.
+            let mut all_distances = vec![f64::INFINITY; self.graph.vertices];
+            for i in 0..self.graph.vertices {
+                all_distances[i] = self.distances[i];
+            }
+            // This is a dummy return for the path part, as it's not relevant here.
+            Some((0.0, Vec::new()))
+        }
     }
 
     fn bmssp(&mut self, level: usize, bound: f64, frontier: Vec<usize>) -> (f64, Vec<usize>) {
@@ -517,11 +565,13 @@ mod tests {
         graph.add_edge(7, 12, 8.0);
 
         let mut solver = SSSpSolver::new(graph);
-        let distances = solver.solve(0);
+        let result = solver.solve(0, 14);
 
-        assert_eq!(distances[0], 0.0);
-        assert!(distances[1] > 0.0 && distances[1] < f64::INFINITY);
-        assert!(distances[14] > 0.0 && distances[14] < f64::INFINITY);
+        assert!(result.is_some());
+        let (distance, path) = result.unwrap();
+        assert!(distance > 0.0 && distance < f64::INFINITY);
+        assert_eq!(path.first(), Some(&0));
+        assert_eq!(path.last(), Some(&14));
     }
 
     #[test]
@@ -539,20 +589,21 @@ mod tests {
         }
 
         let mut solver = SSSpSolver::new(graph);
-        let distances = solver.solve(0);
+        let result = solver.solve(0, 15);
 
-        assert_eq!(distances[0], 0.0);
-        assert!(distances[5] > 0.0 && distances[5] < f64::INFINITY);
-        assert_eq!(distances[15], f64::INFINITY); // Should be unreachable
+        assert!(result.is_none());
     }
 
     #[test]
     fn single_vertex() {
         let graph = Graph::new(1);
         let mut solver = SSSpSolver::new(graph);
-        let distances = solver.solve(0);
+        let result = solver.solve(0, 0);
 
-        assert_eq!(distances[0], 0.0);
+        assert!(result.is_some());
+        let (distance, path) = result.unwrap();
+        assert_eq!(distance, 0.0);
+        assert_eq!(path, vec![0]);
     }
 
     #[test]
@@ -569,27 +620,18 @@ mod tests {
 
         // Test with new algorithm
         let mut solver1 = SSSpSolver::new(graph.clone());
-        let distances1 = solver1.dijkstra(0);
+        let result1 = solver1.solve(0, 11);
 
         // Test with Dijkstra
         let mut solver2 = SSSpSolver::new(graph);
-        let distances2 = solver2.dijkstra(0);
+        let result2 = solver2.dijkstra(0, Some(11));
 
-        // Results should be the same
-        for i in 0..12 {
-            if distances1[i].is_finite() && distances2[i].is_finite() {
-                assert!(
-                    (distances1[i] - distances2[i]).abs() < 1e-10,
-                    "Vertex {}: new_algo={}, dijkstra={}",
-                    i,
-                    distances1[i],
-                    distances2[i]
-                );
-            } else {
-                assert_eq!(distances1[i].is_finite(), distances2[i].is_finite());
-            }
-        }
+        assert!(result1.is_some());
+        assert!(result2.is_some());
+
+        let (distance1, _) = result1.unwrap();
+        let (distance2, _) = result2.unwrap();
+
+        assert!((distance1 - distance2).abs() < 1e-10);
     }
 }
-
-

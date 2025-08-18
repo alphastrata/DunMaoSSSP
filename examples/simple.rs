@@ -1,30 +1,31 @@
+use fast_sssp::{Graph, SSSpSolver};
+
 fn main() {
-    // Create a larger graph to showcase the new algorithm
-    let mut graph = fast_sssp::Graph::new(25);
+    // Create a simple graph
+    let mut graph = Graph::new(6);
+    graph.add_edge(0, 1, 7.0);
+    graph.add_edge(0, 2, 9.0);
+    graph.add_edge(0, 5, 14.0);
+    graph.add_edge(1, 2, 10.0);
+    graph.add_edge(1, 3, 15.0);
+    graph.add_edge(2, 3, 11.0);
+    graph.add_edge(2, 5, 2.0);
+    graph.add_edge(3, 4, 6.0);
+    graph.add_edge(4, 5, 9.0);
 
-    // Create a more complex graph structure
-    for i in 0..24 {
-        graph.add_edge(i, i + 1, (i % 5 + 1) as f64);
-        if i >= 5 {
-            graph.add_edge(i, i - 5, 2.0);
-        }
-    }
+    let mut solver = SSSpSolver::new(graph);
+    let source = 0;
+    let goal = 4;
 
-    // Add some cross connections
-    graph.add_edge(0, 10, 15.0);
-    graph.add_edge(5, 20, 12.0);
-    graph.add_edge(12, 3, 8.0);
-    graph.add_edge(18, 7, 6.0);
+    println!(
+        "Finding shortest path from vertex {} to {}...",
+        source, goal
+    );
 
-    let mut solver = fast_sssp::SSSpSolver::new(graph);
-    let distances = solver.solve(0);
-
-    println!("Shortest distances from vertex 0 (using new O(m log^(2/3) n) algorithm):");
-    for (i, &dist) in distances.iter().enumerate() {
-        if dist == std::f64::INFINITY {
-            println!("  {} -> ∞", i);
-        } else {
-            println!("  {} -> {:.1}", i, dist);
-        }
+    if let Some((distance, path)) = solver.solve(source, goal) {
+        println!("Shortest distance: {:.1}", distance);
+        println!("Path: {:?}", path);
+    } else {
+        println!("No path found from {} to {}", source, goal);
     }
 }
