@@ -1,0 +1,50 @@
+use fast_sssp::{Graph, SSSpSolver};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+
+fn read_dimacs_graph(path: &Path) -> Graph {
+    let file = File::open(path).unwrap();
+    let reader = BufReader::new(file);
+    let mut graph = None;
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.is_empty() {
+            continue;
+        }
+
+        match parts[0] {
+            "c" => continue, // Comment
+            "p" => {
+                // Problem line: p sp <nodes> <edges>
+                let vertices = parts[2].parse::<usize>().unwrap();
+                graph = Some(Graph::new(vertices));
+            }
+            "a" => {
+                // Arc descriptor: a <from> <to> <weight>
+                let from = parts[1].parse::<usize>().unwrap() - 1; // Adjust for 0-based indexing
+                let to = parts[2].parse::<usize>().unwrap() - 1; // Adjust for 0-based indexing
+                let weight = parts[3].parse::<f64>().unwrap();
+                if let Some(g) = &mut graph {
+                    g.add_edge(from, to, weight);
+                }
+            }
+            _ => continue,
+        }
+    }
+    graph.unwrap()
+}
+
+#[test]
+fn sssp_from_file() {
+    let graph = read_dimacs_graph(Path::new("tests/test_data/Rome99"));
+    let mut solver = SSSpSolver::new(graph);
+    let distances = solver.solve(0);
+
+    assert_eq!(distances[0], 0.0);
+    // We don't have the answer file, so we can't do a full comparison.
+    // We'll just check that the solver runs and produces some finite distances.
+    assert!(distances.iter().any(|&d| d > 0.0 && d.is_finite()));
+}
