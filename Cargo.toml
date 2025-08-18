@@ -47,6 +47,11 @@ harness = false
 name = "bench"
 path = "benches/sssp_benchmark.rs"
 
+[[bench]]
+harness = false
+name = "vs_petgraph_dijkstra"
+path = "benches/vs_petgraph_dijkstra.rs"
+
 [[example]]
 name = "wiki_talk_benchmark"
 path = "examples/wiki_talk.rs"
