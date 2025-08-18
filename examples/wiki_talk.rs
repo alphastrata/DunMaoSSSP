@@ -75,7 +75,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    println!("The new algorithm should show improvements on this scale!");
-
     Ok(())
 }

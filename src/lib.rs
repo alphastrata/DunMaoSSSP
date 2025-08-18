@@ -469,7 +469,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_simple_graph() {
+    fn simple_graph() {
         // Create a larger graph (15 vertices), because on <=10 we run Dijkstra per the paper's recommendations.
         let mut graph = Graph::new(15);
 
@@ -493,7 +493,7 @@ mod tests {
     }
 
     #[test]
-    fn test_disconnected_graph() {
+    fn disconnected_graph() {
         let mut graph = Graph::new(20);
 
         // Connected component 1: vertices 0-9
@@ -515,7 +515,7 @@ mod tests {
     }
 
     #[test]
-    fn test_single_vertex() {
+    fn single_vertex() {
         let graph = Graph::new(1);
         let mut solver = SSSpSolver::new(graph);
         let distances = solver.solve(0);
@@ -524,7 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn test_algorithm_comparison() {
+    fn algorithm_comparison() {
         // Test that both algorithms give same results on same graph
         let mut graph = Graph::new(12);
 

@@ -31,6 +31,8 @@ cargo test -- --nocapture
 
 ```
 
+Extended testing uses data from [here](https://www.diag.uniroma1.it/~challenge9/).
+
 > # So... Is it good? -- Yeah, it shows promise!
 
 ### Benchmarking:
