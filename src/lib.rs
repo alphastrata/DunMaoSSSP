@@ -126,12 +126,44 @@ impl SSSpSolver {
 
         let (_, _result) = self.bmssp(max_level, f64::INFINITY, frontier);
 
-        // Mark all reachable vertices as complete
-        (0..self.graph.vertices).for_each(|i| {
-            if self.distances[i] != f64::INFINITY {
-                self.complete[i] = true;
+        // After bmssp, some nodes might be reachable but not yet finalized.
+        // Run a Dijkstra-like process on the entire graph to settle all nodes.
+        // This uses the distances computed by bmssp as a starting point.
+        let mut heap = BinaryHeap::new();
+        for i in 0..self.graph.vertices {
+            if !self.complete[i] && self.distances[i] != f64::INFINITY {
+                heap.push(Reverse(VertexDistance {
+                    vertex: i,
+                    distance: self.distances[i],
+                }));
             }
-        });
+        }
+
+        while let Some(Reverse(VertexDistance {
+            vertex: u,
+            distance: dist,
+        })) = heap.pop()
+        {
+            if dist > self.distances[u] {
+                continue;
+            }
+
+            self.complete[u] = true;
+
+            self.graph.edges[u].iter().for_each(|edge| {
+                let v = edge.to;
+                let new_dist = dist + edge.weight;
+
+                if new_dist < self.distances[v] {
+                    self.distances[v] = new_dist;
+                    self.predecessors[v] = Some(u);
+                    heap.push(Reverse(VertexDistance {
+                        vertex: v,
+                        distance: new_dist,
+                    }));
+                }
+            });
+        }
 
         self.distances.clone()
     }
@@ -559,3 +591,5 @@ mod tests {
         }
     }
 }
+
+
