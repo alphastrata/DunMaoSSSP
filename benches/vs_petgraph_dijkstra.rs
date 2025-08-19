@@ -4,7 +4,7 @@
 mod graph_loader;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use fast_sssp::SSSpSolver;
+use fast_sssp::dun_mao_all_distances;
 use graph_loader::{read_dimacs_graph_for_fast_sssp, read_dimacs_graph_for_petgraph};
 use petgraph::algo::dijkstra;
 use std::path::Path;
@@ -16,8 +16,7 @@ fn benchmark_solvers(c: &mut Criterion) {
     group.bench_function("fast_sssp", |b| {
         let graph = read_dimacs_graph_for_fast_sssp(Path::new("tests/test_data/Rome99"));
         b.iter(|| {
-            let mut solver = SSSpSolver::new(graph.clone());
-            solver.solve(0);
+            dun_mao_all_distances(&graph, 0);
         })
     });
 

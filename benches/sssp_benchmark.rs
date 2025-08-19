@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use fast_sssp::{Graph, SSSpSolver};
+use fast_sssp::{dun_mao_all_distances, Graph, SSSpSolver};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
@@ -62,14 +62,13 @@ fn bench_dijkstra_vs_new_algorithm(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("Dijkstra_Sparse", n), &n, |b, &_| {
             b.iter(|| {
                 let mut solver = SSSpSolver::new(sparse_graph.clone());
-                black_box(solver.dijkstra(0));
+                black_box(solver.dijkstra(0, None));
             })
         });
 
         group.bench_with_input(BenchmarkId::new("NewAlgorithm_Sparse", n), &n, |b, &_| {
             b.iter(|| {
-                let mut solver = SSSpSolver::new(sparse_graph.clone());
-                black_box(solver.solve(0))
+                black_box(dun_mao_all_distances(&sparse_graph, 0));
             })
         });
     }
@@ -81,14 +80,13 @@ fn bench_dijkstra_vs_new_algorithm(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("Dijkstra_Dense", n), &n, |b, &_| {
             b.iter(|| {
                 let mut solver = SSSpSolver::new(dense_graph.clone());
-                black_box(solver.dijkstra(0));
+                black_box(solver.dijkstra(0, None));
             })
         });
 
         group.bench_with_input(BenchmarkId::new("NewAlgorithm_Dense", n), &n, |b, &_| {
             b.iter(|| {
-                let mut solver = SSSpSolver::new(dense_graph.clone());
-                black_box(solver.solve(0))
+                black_box(dun_mao_all_distances(&dense_graph, 0));
             })
         });
     }
@@ -107,8 +105,7 @@ fn bench_scaling_behavior(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("NewAlgorithm_Scaling", n), &n, |b, &_| {
             b.iter(|| {
-                let mut solver = SSSpSolver::new(graph.clone());
-                black_box(solver.solve(0))
+                black_box(dun_mao_all_distances(&graph, 0));
             })
         });
     }

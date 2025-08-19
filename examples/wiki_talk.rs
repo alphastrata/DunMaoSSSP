@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !data_path.exists() {
         println!("Wiki-Talk graph not found!");
         println!("Please run: cargo run --bin fetch_data");
-        return Ok(())
+        return Ok(());
     }
 
     println!("Loading Wiki-Talk dataset...");

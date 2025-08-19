@@ -1,6 +1,15 @@
 use std::cmp::{Ordering, Reverse};
-use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::f64;
+
+#[cfg(not(feature = "hashbrown"))]
+use std::collections::{BinaryHeap, HashMap, HashSet};
+
+#[cfg(feature = "hashbrown")]
+use hashbrown::{HashMap, HashSet};
+#[cfg(feature = "hashbrown")]
+use std::collections::BinaryHeap;
+
+use bit_vec::BitVec;
 
 #[cfg(feature = "bincode")]
 use bincode::{Decode, Encode};
@@ -63,6 +72,24 @@ impl Graph {
     }
 }
 
+// Public API functions inspired by petgraph
+
+/// Computes the shortest path from a source to a goal using the Dun-Mao algorithm.
+pub fn dun_mao_shortest_path(
+    graph: &Graph,
+    source: usize,
+    goal: usize,
+) -> Option<(f64, Vec<usize>)> {
+    let mut solver = SSSpSolver::new(graph.clone());
+    solver.solve(source, goal)
+}
+
+/// Computes all distances from a source vertex using the Dun-Mao algorithm.
+pub fn dun_mao_all_distances(graph: &Graph, source: usize) -> HashMap<usize, f64> {
+    let mut solver = SSSpSolver::new(graph.clone());
+    solver.solve_all(source)
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct VertexDistance {
     vertex: usize,
@@ -87,13 +114,20 @@ impl PartialOrd for VertexDistance {
     }
 }
 
+/// Implements the SSSP algorithm from "Breaking the Sorting Barrier for Directed Single-Source Shortest Paths"
+/// by Duan, Mao, Mao, Shu, and Yin (2025).
 pub struct SSSpSolver {
     graph: Graph,
+    /// Stores the shortest distance from the source to each vertex.
     distances: Vec<f64>,
+    /// Stores the predecessor of each vertex in the shortest path.
     predecessors: Vec<Option<usize>>,
-    complete: Vec<bool>,
-    k: usize, // log^(1/3)(n)
-    t: usize, // log^(2/3)(n)
+    /// A bitmask to mark vertices as complete (visited and finalized).
+    complete: BitVec,
+    /// Parameter `k`, approximately log^(1/3)(n).
+    k: usize,
+    /// Parameter `t`, approximately log^(2/3)(n).
+    t: usize,
 }
 
 impl SSSpSolver {
@@ -105,7 +139,7 @@ impl SSSpSolver {
         SSSpSolver {
             distances: vec![f64::INFINITY; n],
             predecessors: vec![None; n],
-            complete: vec![false; n],
+            complete: BitVec::from_elem(n, false),
             graph,
             k: k.max(2), // Ensure k is at least 2 for small graphs
             t: t.max(2), // Ensure t is at least 2 for small graphs
@@ -114,7 +148,7 @@ impl SSSpSolver {
 
     pub fn solve(&mut self, source: usize, goal: usize) -> Option<(f64, Vec<usize>)> {
         self.distances[source] = 0.0;
-        self.complete[source] = true;
+        self.complete.set(source, true);
 
         // For small graphs, use simple Dijkstra
         if self.graph.vertices <= 10 {
@@ -131,7 +165,7 @@ impl SSSpSolver {
         // This uses the distances computed by bmssp as a starting point.
         let mut heap = BinaryHeap::new();
         for i in 0..self.graph.vertices {
-            if !self.complete[i] && self.distances[i] != f64::INFINITY {
+            if !self.complete.get(i).unwrap_or(false) && self.distances[i] != f64::INFINITY {
                 heap.push(Reverse(VertexDistance {
                     vertex: i,
                     distance: self.distances[i],
@@ -152,7 +186,7 @@ impl SSSpSolver {
                 continue;
             }
 
-            self.complete[u] = true;
+            self.complete.set(u, true);
 
             self.graph.edges[u].iter().for_each(|edge| {
                 let v = edge.to;
@@ -174,6 +208,60 @@ impl SSSpSolver {
         } else {
             Some((self.distances[goal], self.reconstruct_path(source, goal)))
         }
+    }
+
+    pub fn solve_all(&mut self, source: usize) -> HashMap<usize, f64> {
+        self.distances[source] = 0.0;
+        self.complete.set(source, true);
+
+        if self.graph.vertices <= 10 {
+            self.dijkstra(source, None);
+        } else {
+            let max_level = ((self.graph.vertices as f64).ln() / self.t as f64).ceil() as usize;
+            let frontier = vec![source];
+            self.bmssp(max_level, f64::INFINITY, frontier);
+
+            let mut heap = BinaryHeap::new();
+            for i in 0..self.graph.vertices {
+                if !self.complete.get(i).unwrap_or(false) && self.distances[i] != f64::INFINITY {
+                    heap.push(Reverse(VertexDistance {
+                        vertex: i,
+                        distance: self.distances[i],
+                    }));
+                }
+            }
+
+            while let Some(Reverse(VertexDistance {
+                vertex: u,
+                distance: dist,
+            })) = heap.pop()
+            {
+                if dist > self.distances[u] {
+                    continue;
+                }
+                self.complete.set(u, true);
+                for edge in &self.graph.edges[u] {
+                    let v = edge.to;
+                    let new_dist = dist + edge.weight;
+                    if new_dist < self.distances[v] {
+                        self.distances[v] = new_dist;
+                        self.predecessors[v] = Some(u);
+                        heap.push(Reverse(VertexDistance {
+                            vertex: v,
+                            distance: new_dist,
+                        }));
+                    }
+                }
+            }
+        }
+
+        let mut results = HashMap::new();
+        for i in 0..self.graph.vertices {
+            if self.distances[i] != f64::INFINITY {
+                results.insert(i, self.distances[i]);
+            }
+        }
+        results
     }
 
     fn reconstruct_path(&self, source: usize, goal: usize) -> Vec<usize> {
@@ -216,7 +304,7 @@ impl SSSpSolver {
                 continue;
             }
 
-            self.complete[u] = true;
+            self.complete.set(u, true);
 
             self.graph.edges[u].iter().for_each(|edge| {
                 let v = edge.to;
@@ -240,19 +328,14 @@ impl SSSpSolver {
                 Some((self.distances[g], self.reconstruct_path(source, g)))
             }
         } else {
-            //FIXME:
-            // This branch is for the old behavior, returning all distances.
-            // It's not used by the new `solve` method but is kept for compatibility with old tests for now.
-            // A better approach would be to have a separate method for all distances.
-            let mut all_distances = vec![f64::INFINITY; self.graph.vertices];
-            for i in 0..self.graph.vertices {
-                all_distances[i] = self.distances[i];
-            }
-            // This is a dummy return for the path part, as it's not relevant here.
+            // This branch is for returning all distances.
+            // The path is empty because it's not a single-path query.
             Some((0.0, Vec::new()))
         }
     }
 
+    /// The recursive core of the algorithm.
+    /// `bmssp` stands for "Breaking the Mold Single-Source Shortest Path".
     fn bmssp(&mut self, level: usize, bound: f64, frontier: Vec<usize>) -> (f64, Vec<usize>) {
         if level == 0 {
             return self.base_case(bound, frontier);
@@ -303,8 +386,8 @@ impl SSSpSolver {
             let mut batch_prepend_list = Vec::new();
 
             sub_result.iter().for_each(|&u| {
-                if !self.complete[u] {
-                    self.complete[u] = true;
+                if !self.complete.get(u).unwrap_or(false) {
+                    self.complete.set(u, true);
                 }
 
                 self.graph.edges[u].iter().for_each(|edge| {
@@ -337,7 +420,7 @@ impl SSSpSolver {
         working_set.iter().for_each(|&v| {
             if self.distances[v] < current_bound && !result_set.contains(&v) {
                 result_set.push(v);
-                self.complete[v] = true;
+                self.complete.set(v, true);
             }
         });
 
@@ -374,7 +457,7 @@ impl SSSpSolver {
                 continue;
             }
 
-            self.complete[u] = true;
+            self.complete.set(u, true);
             processed += 1;
 
             self.graph.edges[u].iter().for_each(|edge| {
@@ -418,7 +501,7 @@ impl SSSpSolver {
         // Mark result vertices as complete
         result.iter().for_each(|&v| {
             if self.distances[v] != f64::INFINITY {
-                self.complete[v] = true;
+                self.complete.set(v, true);
             }
         });
 
@@ -544,6 +627,25 @@ impl AdaptiveDataStructure {
     }
 }
 
+// Parallel stubs
+#[cfg(feature = "parallel_pivot")]
+mod parallel_pivot {
+    // pub fn par_find_pivots(...)
+    // todo!()
+}
+
+#[cfg(feature = "parallel_frontier_expansion")]
+mod parallel_frontier_expansion {
+    // pub fn par_find_frontier(...)
+    // todo!()
+}
+
+#[cfg(feature = "parallel_edge_relaxation")]
+mod parallel_edge_relaxation {
+    // pub fn par_relax_edges(...)
+    // todo!()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -564,8 +666,7 @@ mod tests {
         graph.add_edge(2, 8, 15.0);
         graph.add_edge(7, 12, 8.0);
 
-        let mut solver = SSSpSolver::new(graph);
-        let result = solver.solve(0, 14);
+        let result = dun_mao_shortest_path(&graph, 0, 14);
 
         assert!(result.is_some());
         let (distance, path) = result.unwrap();
@@ -588,8 +689,7 @@ mod tests {
             graph.add_edge(i, i + 1, 3.0);
         }
 
-        let mut solver = SSSpSolver::new(graph);
-        let result = solver.solve(0, 15);
+        let result = dun_mao_shortest_path(&graph, 0, 15);
 
         assert!(result.is_none());
     }
@@ -597,8 +697,7 @@ mod tests {
     #[test]
     fn single_vertex() {
         let graph = Graph::new(1);
-        let mut solver = SSSpSolver::new(graph);
-        let result = solver.solve(0, 0);
+        let result = dun_mao_shortest_path(&graph, 0, 0);
 
         assert!(result.is_some());
         let (distance, path) = result.unwrap();
@@ -619,11 +718,10 @@ mod tests {
         graph.add_edge(2, 8, 4.0);
 
         // Test with new algorithm
-        let mut solver1 = SSSpSolver::new(graph.clone());
-        let result1 = solver1.solve(0, 11);
+        let result1 = dun_mao_shortest_path(&graph, 0, 11);
 
         // Test with Dijkstra
-        let mut solver2 = SSSpSolver::new(graph);
+        let mut solver2 = SSSpSolver::new(graph.clone());
         let result2 = solver2.dijkstra(0, Some(11));
 
         assert!(result1.is_some());

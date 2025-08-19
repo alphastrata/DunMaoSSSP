@@ -142,6 +142,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bit-vec"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
+
+[[package]]
 name = "bitflags"
 version = "2.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -397,9 +403,11 @@ name = "fast_sssp"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "bit-vec",
  "criterion",
  "env_logger",
  "flate2",
+ "hashbrown",
  "log",
  "petgraph",
  "rand",
@@ -582,6 +590,7 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash",
+ "rayon",
 ]
 
 [[package]]
