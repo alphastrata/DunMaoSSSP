@@ -126,6 +126,37 @@ pub fn read_dimacs_graph_for_fast_sssp(path: &Path) -> Graph {
     graph.unwrap()
 }
 
+#[cfg(feature = "flate2")]
+pub fn read_wiki_graph_for_fast_sssp(gz_path: &Path) -> Graph {
+    let file = File::open(gz_path).unwrap();
+    let gz = GzDecoder::new(file);
+    let reader = BufReader::new(gz);
+
+    let mut edges = Vec::new();
+    let mut max_node = 0;
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        if line.starts_with('#') {
+            continue;
+        }
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 {
+            let u = parts[0].parse::<usize>().unwrap();
+            let v = parts[1].parse::<usize>().unwrap();
+            edges.push((u, v));
+            max_node = max_node.max(u).max(v);
+        }
+    }
+
+    let mut graph = Graph::new(max_node + 1);
+    for (u, v) in edges {
+        graph.add_edge(u, v, 1.0);
+    }
+
+    graph
+}
+
 pub fn convert_to_petgraph(graph: &Graph) -> (DiGraph<(), f64>, HashMap<usize, NodeIndex>) {
     let mut petgraph_graph = DiGraph::new();
     let mut node_map = HashMap::new();
