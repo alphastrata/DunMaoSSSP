@@ -37,10 +37,10 @@ fn benchmark(c: &mut Criterion) {
         println!("LiveJournal dataset not found, skipping benchmark.");
         return;
     }
-    let (petgraph_graph, node_map) = graph_loader::read_wiki_graph_for_petgraph(wiki_path);
-    let fast_sssp_graph = graph_loader::read_wiki_graph_for_fast_sssp(wiki_path);
+    let (petgraph_graph, node_map) = graph_loader::read_wiki_graph_for_petgraph(live_journal_path);
+    let fast_sssp_graph = graph_loader::read_wiki_graph_for_fast_sssp(live_journal_path);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut nodes: Vec<usize> = (0..fast_sssp_graph.vertices).collect();
     nodes.shuffle(&mut rng);
     let pairs: Vec<(usize, usize)> = nodes

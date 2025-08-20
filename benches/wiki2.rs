@@ -1,9 +1,10 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use fast_sssp::{DuanMaoSolverV2, Graph};
 use petgraph::algo::dijkstra;
 use petgraph::graph::{DiGraph, NodeIndex};
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::hint::black_box;
 use std::path::Path;
 
 #[path = "../tests/graph_loader.rs"]
@@ -16,10 +17,16 @@ fn run_duan_mao_v2(graph: &Graph, pairs: &[(usize, usize)]) {
     }
 }
 
-fn run_petgraph_dijkstra(graph: &DiGraph<(), f64>, node_map: &HashMap<usize, NodeIndex>, pairs: &[(usize, usize)]) {
+fn run_petgraph_dijkstra(
+    graph: &DiGraph<(), f64>,
+    node_map: &HashMap<usize, NodeIndex>,
+    pairs: &[(usize, usize)],
+) {
     for (source, goal) in pairs {
         if let (Some(&source_node), Some(&goal_node)) = (node_map.get(source), node_map.get(goal)) {
-            black_box(dijkstra(&graph, source_node, Some(goal_node), |e| *e.weight()));
+            black_box(dijkstra(&graph, source_node, Some(goal_node), |e| {
+                *e.weight()
+            }));
         }
     }
 }
@@ -33,10 +40,14 @@ fn benchmark(c: &mut Criterion) {
     let fast_sssp_graph = Graph::from_file(bin_path).unwrap();
     let (petgraph_graph, node_map) = graph_loader::convert_to_petgraph(&fast_sssp_graph);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut nodes: Vec<usize> = (0..fast_sssp_graph.vertices).collect();
     nodes.shuffle(&mut rng);
-    let pairs: Vec<(usize, usize)> = nodes.chunks(2).map(|chunk| (chunk[0], chunk[1])).take(10).collect();
+    let pairs: Vec<(usize, usize)> = nodes
+        .chunks(2)
+        .map(|chunk| (chunk[0], chunk[1]))
+        .take(10)
+        .collect();
 
     let mut group = c.benchmark_group("Wikipedia SSSP (V2)");
 
@@ -45,7 +56,13 @@ fn benchmark(c: &mut Criterion) {
     });
 
     group.bench_function("petgraph_dijkstra", |b| {
-        b.iter(|| run_petgraph_dijkstra(black_box(&petgraph_graph), black_box(&node_map), black_box(&pairs)))
+        b.iter(|| {
+            run_petgraph_dijkstra(
+                black_box(&petgraph_graph),
+                black_box(&node_map),
+                black_box(&pairs),
+            )
+        })
     });
 
     group.finish();

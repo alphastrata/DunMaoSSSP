@@ -20,7 +20,7 @@ A naive impl of an SSSP algorithm from the 2025 ["Breaking the Sorting Barrier f
 name = "fast_sssp"
 
 [features]
-default = []
+default = ["full"]
 hashbrown = ["dep:hashbrown"]
 parallel = ["dep:crossbeam"]
 simd_edge_relaxation = []

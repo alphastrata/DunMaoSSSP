@@ -1,5 +1,5 @@
 use crate::graph::Graph;
-use crate::utils::{VertexDistance, INFINITY};
+use crate::utils::{INFINITY, VertexDistance};
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
@@ -81,15 +81,21 @@ impl DuanMaoSolverV2 {
         self.complete.fill(false);
     }
 
-    fn bmssp2(&mut self, level: usize, bound: f64, pivots: Vec<usize>, goal: Option<usize>) -> (f64, Vec<usize>) {
+    fn bmssp2(
+        &mut self,
+        level: usize,
+        bound: f64,
+        pivots: Vec<usize>,
+        goal: Option<usize>,
+    ) -> (f64, Vec<usize>) {
         if level == 0 {
             return self.base_case2(bound, pivots, goal);
         }
 
-        if let Some(g) = goal {
-            if self.complete[g] {
-                return (bound, Vec::new());
-            }
+        if let Some(g) = goal
+            && self.complete[g]
+        {
+            return (bound, Vec::new());
         }
 
         let (pivots, working_set) = self.find_pivots2(bound, &pivots);
@@ -98,7 +104,8 @@ impl DuanMaoSolverV2 {
             return (bound, working_set);
         }
 
-        let mut data_structure = EfficientDataStructure::new(2_usize.pow(((level - 1) * self.t).min(20) as u32), bound);
+        let mut data_structure =
+            EfficientDataStructure::new(2_usize.pow(((level - 1) * self.t).min(20) as u32), bound);
 
         for &pivot in &pivots {
             if self.distances[pivot] != INFINITY {
@@ -107,14 +114,18 @@ impl DuanMaoSolverV2 {
         }
 
         let mut result_set = Vec::new();
-        let mut current_bound = pivots.iter().filter(|&&v| self.distances[v] != INFINITY).map(|&v| self.distances[v]).fold(INFINITY, f64::min);
+        let mut current_bound = pivots
+            .iter()
+            .filter(|&&v| self.distances[v] != INFINITY)
+            .map(|&v| self.distances[v])
+            .fold(INFINITY, f64::min);
         let max_result_size = self.k * 2_usize.pow((level * self.t).min(20) as u32);
 
         while result_set.len() < max_result_size && !data_structure.is_empty() {
-            if let Some(g) = goal {
-                if self.complete[g] {
-                    break;
-                }
+            if let Some(g) = goal
+                && self.complete[g]
+            {
+                break;
             }
 
             let (subset_bound, subset) = data_structure.pull();
@@ -133,7 +144,12 @@ impl DuanMaoSolverV2 {
         (current_bound, result_set)
     }
 
-    fn base_case2(&mut self, bound: f64, frontier: Vec<usize>, goal: Option<usize>) -> (f64, Vec<usize>) {
+    fn base_case2(
+        &mut self,
+        bound: f64,
+        frontier: Vec<usize>,
+        goal: Option<usize>,
+    ) -> (f64, Vec<usize>) {
         if frontier.is_empty() {
             return (bound, Vec::new());
         }
@@ -142,7 +158,10 @@ impl DuanMaoSolverV2 {
         for &start_node in &frontier {
             self.complete[start_node] = true;
             if self.distances[start_node] < bound {
-                heap.push(Reverse(VertexDistance::new(start_node, self.distances[start_node])));
+                heap.push(Reverse(VertexDistance::new(
+                    start_node,
+                    self.distances[start_node],
+                )));
             }
         }
 
@@ -155,11 +174,11 @@ impl DuanMaoSolverV2 {
                 continue;
             }
 
-            if let Some(g) = goal {
-                if vertex == g {
-                    result.push(vertex);
-                    break;
-                }
+            if let Some(g) = goal
+                && vertex == g
+            {
+                result.push(vertex);
+                break;
             }
 
             result.push(vertex);
@@ -223,15 +242,31 @@ impl DuanMaoSolverV2 {
         let pivots: Vec<usize> = subtree_sizes
             .iter()
             .filter(|&(_, &size)| size >= self.k)
-            .filter_map(|(&root, _)| if frontier.contains(&root) { Some(root) } else { None })
+            .filter_map(|(&root, _)| {
+                if frontier.contains(&root) {
+                    Some(root)
+                } else {
+                    None
+                }
+            })
             .collect();
 
-        let final_pivots = if pivots.is_empty() { frontier.to_vec() } else { pivots };
+        let final_pivots = if pivots.is_empty() {
+            frontier.to_vec()
+        } else {
+            pivots
+        };
 
         (final_pivots, working_set.into_iter().collect())
     }
 
-    fn edge_relaxation2(&mut self, completed_vertices: &[usize], lower_bound: f64, upper_bound: f64, data_structure: &mut EfficientDataStructure) {
+    fn edge_relaxation2(
+        &mut self,
+        completed_vertices: &[usize],
+        lower_bound: f64,
+        upper_bound: f64,
+        data_structure: &mut EfficientDataStructure,
+    ) {
         let mut batch_prepend_list = Vec::new();
         for &u in completed_vertices {
             self.complete[u] = true;
@@ -288,10 +323,15 @@ impl EfficientDataStructure {
 
     pub fn insert(&mut self, vertex: usize, distance: f64) {
         if distance < self.bound {
-            if self.sorted_blocks.is_empty() || self.sorted_blocks.last().unwrap().len() >= self.block_size {
+            if self.sorted_blocks.is_empty()
+                || self.sorted_blocks.last().unwrap().len() >= self.block_size
+            {
                 self.sorted_blocks.push(Vec::with_capacity(self.block_size));
             }
-            self.sorted_blocks.last_mut().unwrap().push((vertex, distance));
+            self.sorted_blocks
+                .last_mut()
+                .unwrap()
+                .push((vertex, distance));
         }
     }
 
@@ -320,8 +360,18 @@ impl EfficientDataStructure {
     }
 
     fn peek_min(&self) -> Option<f64> {
-        let batch_min = self.batch_blocks.iter().flat_map(|b| b.iter()).map(|(_, d)| *d).fold(f64::INFINITY, f64::min);
-        let sorted_min = self.sorted_blocks.iter().flat_map(|b| b.iter()).map(|(_, d)| *d).fold(f64::INFINITY, f64::min);
+        let batch_min = self
+            .batch_blocks
+            .iter()
+            .flat_map(|b| b.iter())
+            .map(|(_, d)| *d)
+            .fold(f64::INFINITY, f64::min);
+        let sorted_min = self
+            .sorted_blocks
+            .iter()
+            .flat_map(|b| b.iter())
+            .map(|(_, d)| *d)
+            .fold(f64::INFINITY, f64::min);
         let min = batch_min.min(sorted_min);
         if min == f64::INFINITY {
             None
