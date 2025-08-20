@@ -46,10 +46,11 @@ fn benchmark(c: &mut Criterion) {
     let pairs: Vec<(usize, usize)> = nodes
         .chunks(2)
         .map(|chunk| (chunk[0], chunk[1]))
-        .take(10)
+        .take(5) // keep the number of pairs reasonable!
         .collect();
 
     let mut group = c.benchmark_group("livejournal SSSP (V2)");
+    group.sample_size(10); // In particular on this bench, the DuanMao can really be a lot faster than the Petgraph comparison -- so to keep you from having to set at the computer for more than 10 minutes...
 
     group.bench_function("duan_mao_v2", |b| {
         b.iter(|| run_duan_mao_v2(black_box(&fast_sssp_graph), black_box(&pairs)))
