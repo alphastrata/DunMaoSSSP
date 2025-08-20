@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
+#[allow(dead_code)]
 pub fn read_dimacs_graph_for_petgraph(
     path: &Path,
 ) -> (DiGraph<(), f64>, HashMap<usize, NodeIndex>) {
@@ -67,7 +68,7 @@ pub fn read_dimacs_graph_for_fast_sssp(path: &Path) -> Graph {
             "a" => {
                 // Arc descriptor: a <from> <to> <weight>
                 let from = parts[1].parse::<usize>().unwrap() - 1; // Adjust for 0-based indexing
-                let to = parts[2].parse::<usize>().unwrap() - 1;   // Adjust for 0-based indexing
+                let to = parts[2].parse::<usize>().unwrap() - 1; // Adjust for 0-based indexing
                 let weight = parts[3].parse::<f64>().unwrap();
                 if let Some(g) = &mut graph {
                     g.add_edge(from, to, weight);

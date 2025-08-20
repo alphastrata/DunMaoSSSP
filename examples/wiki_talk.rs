@@ -1,7 +1,7 @@
 use std::time::Instant;
 use std::{hint::black_box, path::Path};
 
-use fast_sssp::{Graph, SSSpSolver};
+use fast_sssp::{dun_mao_shortest_path, Graph, SSSpSolver};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data_path = Path::new("data/wiki-talk-graph.bin");
@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !data_path.exists() {
         println!("Wiki-Talk graph not found!");
         println!("Please run: cargo run --bin fetch_data");
-        return Ok(());
+        return Ok(())
     }
 
     println!("Loading Wiki-Talk dataset...");
@@ -47,15 +47,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Benchmark Dijkstra
-        let mut solver1 = SSSpSolver::new(graph.clone());
         let start = Instant::now();
+        let mut solver1 = SSSpSolver::new(graph.clone());
         let result1 = solver1.dijkstra(source, Some(goal));
         let dijkstra_time = start.elapsed().as_millis();
 
         // VS the new
-        let mut solver2 = SSSpSolver::new(graph.clone());
         let start = Instant::now();
-        let result2 = solver2.solve(source, goal);
+        let result2 = dun_mao_shortest_path(&graph, source, goal);
         let new_algo_time = start.elapsed().as_millis();
 
         black_box((result1, result2)); // JIC rustc tries to be too clever.

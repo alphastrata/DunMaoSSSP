@@ -113,3 +113,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - \[\] workspace & feature flag deps like `serde` etc to clean up deps
 - \[\] bring in some other libraries that have a Dijkstra in them, and bench against this.
 - \[\] a `Node` and or a `Weight` would need to be able to carry a wider variety of data types to be useful..
+- [] make the API like Petgraph (which is rather nice and well thought out...)
