@@ -58,7 +58,10 @@ impl ParallelSSSpSolver {
         if self.distances[goal].load(Ordering::Relaxed) == INFINITY {
             None
         } else {
-            Some((self.distances[goal].load(Ordering::Relaxed), self.reconstruct_path(source, goal)))
+            Some((
+                self.distances[goal].load(Ordering::Relaxed),
+                self.reconstruct_path(source, goal),
+            ))
         }
     }
 

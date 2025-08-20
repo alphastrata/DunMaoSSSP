@@ -1,5 +1,5 @@
 #[cfg(all(feature = "parallel"))]
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use fast_sssp::graph::Graph;
 use fast_sssp::parallel::ParallelSSSpSolver;
 use fast_sssp::sequential::SSSpSolver;

@@ -27,12 +27,10 @@ impl AtomicF64 {
         success: Ordering,
         failure: Ordering,
     ) -> Result<f64, f64> {
-        match self.inner.compare_exchange_weak(
-            current.to_bits(),
-            new.to_bits(),
-            success,
-            failure,
-        ) {
+        match self
+            .inner
+            .compare_exchange_weak(current.to_bits(), new.to_bits(), success, failure)
+        {
             Ok(v) => Ok(f64::from_bits(v)),
             Err(v) => Err(f64::from_bits(v)),
         }

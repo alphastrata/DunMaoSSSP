@@ -7,6 +7,10 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
+#[cfg(feature = "flate2")]
+use flate2::read::GzDecoder;
+
+#[allow(dead_code)]
 pub fn read_dimacs_graph_for_petgraph(
     path: &Path,
 ) -> (DiGraph<(), f64>, HashMap<usize, NodeIndex>) {
@@ -47,6 +51,47 @@ pub fn read_dimacs_graph_for_petgraph(
     (graph, node_map)
 }
 
+#[cfg(feature = "flate2")]
+pub fn read_wiki_graph_for_petgraph(
+    gz_path: &Path,
+) -> (DiGraph<(), f64>, HashMap<usize, NodeIndex>) {
+    let file = File::open(gz_path).unwrap();
+    let gz = GzDecoder::new(file);
+    let reader = BufReader::new(gz);
+
+    let mut edges = Vec::new();
+    let mut node_map = HashMap::new();
+    let mut graph = DiGraph::new();
+    let mut max_node = 0;
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        if line.starts_with('#') {
+            continue;
+        }
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 {
+            let u = parts[0].parse::<usize>().unwrap();
+            let v = parts[1].parse::<usize>().unwrap();
+            edges.push((u, v));
+            max_node = max_node.max(u).max(v);
+        }
+    }
+
+    for i in 0..=max_node {
+        let node = graph.add_node(());
+        node_map.insert(i, node);
+    }
+
+    for (u, v) in edges {
+        let from_node = node_map[&u];
+        let to_node = node_map[&v];
+        graph.add_edge(from_node, to_node, 1.0);
+    }
+
+    (graph, node_map)
+}
+
 pub fn read_dimacs_graph_for_fast_sssp(path: &Path) -> Graph {
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
@@ -79,4 +124,24 @@ pub fn read_dimacs_graph_for_fast_sssp(path: &Path) -> Graph {
         }
     }
     graph.unwrap()
+}
+
+pub fn convert_to_petgraph(graph: &Graph) -> (DiGraph<(), f64>, HashMap<usize, NodeIndex>) {
+    let mut petgraph_graph = DiGraph::new();
+    let mut node_map = HashMap::new();
+
+    for i in 0..graph.vertices {
+        let node = petgraph_graph.add_node(());
+        node_map.insert(i, node);
+    }
+
+    for (from, edges) in graph.edges.iter().enumerate() {
+        for edge in edges {
+            let from_node = node_map[&from];
+            let to_node = node_map[&edge.to];
+            petgraph_graph.add_edge(from_node, to_node, edge.weight);
+        }
+    }
+
+    (petgraph_graph, node_map)
 }
