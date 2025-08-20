@@ -211,13 +211,13 @@ mod integration_tests {
         // Check for extra nodes found by fast algorithm
         for (&internal_id, &fast_dist) in &fast_distances {
             let external_id = internal_id + 1; // Convert back to 1-based
-            if let Some(&petgraph_node) = node_map.get(&external_id) {
-                if !petgraph_distances.contains_key(&petgraph_node) {
-                    panic!(
-                        "❌ Fast algorithm found path to node {} (dist={:.6}), but petgraph didn't",
-                        external_id, fast_dist
-                    );
-                }
+            if let Some(&petgraph_node) = node_map.get(&external_id)
+                && !petgraph_distances.contains_key(&petgraph_node)
+            {
+                panic!(
+                    "❌ Fast algorithm found path to node {} (dist={:.6}), but petgraph didn't",
+                    external_id, fast_dist
+                );
             }
         }
 

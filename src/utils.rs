@@ -30,7 +30,7 @@ impl VertexDistance {
 }
 
 impl Eq for VertexDistance {}
-
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for VertexDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.distance.partial_cmp(&other.distance) {
