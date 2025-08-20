@@ -49,66 +49,6 @@ fn download_file(client: &Client, url: &str, path: &str) -> Result<(), Box<dyn s
     Ok(())
 }
 
-fn parse_wiki_talk_to_graph(gz_path: &Path) -> Result<Graph, Box<dyn std::error::Error>> {
-    info!("Parsing Wiki-Talk dataset from compressed file...");
-
-    let file = File::open(gz_path)?;
-    let gz = GzDecoder::new(file);
-    let reader = BufReader::new(gz);
-
-    let mut edges = Vec::new();
-    let mut max_node = 0u32;
-    let mut line_count = 0;
-
-    // Skip header lines and parse edges
-    for line_result in reader.lines() {
-        let line = line_result?;
-
-        // Skip comment lines (start with #)
-        if line.starts_with('#') {
-            continue;
-        }
-
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 2
-            && let (Ok(u), Ok(v)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>())
-        {
-            edges.push((u, v));
-            max_node = max_node.max(u).max(v);
-            line_count += 1;
-
-            if line_count % 100000 == 0 {
-                println!("Parsed {} edges...", line_count);
-            }
-        }
-    }
-
-    println!("Found {} edges, max node ID: {}", edges.len(), max_node);
-
-    // Create our Graph structure
-    let mut graph = Graph::new((max_node + 1) as usize);
-
-    println!("Building graph structure...");
-    edges
-        .iter()
-        .enumerate()
-        .for_each(|(i, (u, v))| {
-            // Add edge with weight 1.0
-            graph.add_edge(*u as usize, *v as usize, 1.0);
-
-            if i % 100000 == 0 {
-                println!("Added {} edges to graph...", i);
-            }
-        });
-
-    info!(
-        "Graph built with {} nodes and {} edges.",
-        graph.vertices,
-        graph.edge_count()
-    );
-    Ok(graph)
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 

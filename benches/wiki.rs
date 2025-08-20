@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use fast_sssp::graph::Graph;
 use fast_sssp::parallel::ParallelSSSpSolver;
 use fast_sssp::sequential::SSSpSolver;
@@ -37,9 +37,8 @@ fn run_petgraph_dijkstra(graph: &DiGraph<(), f64>, pairs: &[(usize, usize)]) {
 }
 
 fn benchmark(c: &mut Criterion) {
-    let path = Path::new("tests/test_data/Rome99");
-    let fast_sssp_graph = graph_loader::read_dimacs_graph_for_fast_sssp(&path);
-    let (petgraph_graph, _) = graph_loader::read_dimacs_graph_for_petgraph(&path);
+    let path = Path::new("data/wiki-talk-graph.bin");
+    let fast_sssp_graph = Graph::from_file(&path).unwrap();
 
     let mut rng = rand::thread_rng();
     let mut nodes: Vec<usize> = (0..fast_sssp_graph.vertices).collect();
@@ -56,7 +55,7 @@ fn benchmark(c: &mut Criterion) {
         b.iter(|| run_fast_sssp_sequential(black_box(&fast_sssp_graph), black_box(&pairs)))
     });
 
-    for threads in [1, 2, 4, 8].iter() {
+    for threads in [8, 12, 16, 24, 32].iter() {
         group.bench_function(format!("fast_sssp_parallel_{}_threads", threads), |b| {
             b.iter(|| {
                 run_fast_sssp_parallel(black_box(&fast_sssp_graph), black_box(&pairs), *threads)
