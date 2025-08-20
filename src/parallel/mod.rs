@@ -429,7 +429,7 @@ impl WorkStealingParallelSolver {
         self.global_queue.push(initial_work);
 
         // Spawn worker threads
-        let mut handles = Vec::new();
+        let mut handles: Vec<thread::JoinHandle<()>> = Vec::new();
         for worker_id in 0..self.num_threads {
             // let solver = Arc::clone(self); // Needs to be Arc<Self>
             // let handle = thread::spawn(move || {

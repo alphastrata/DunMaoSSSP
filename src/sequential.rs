@@ -1,5 +1,5 @@
 use crate::graph::Graph;
-use crate::utils::{AdaptiveDataStructure, VertexDistance, INFINITY};
+use crate::utils::{AdaptiveDataStructure, INFINITY, VertexDistance};
 use std::cmp::Reverse;
 
 #[cfg(not(feature = "hashbrown"))]
@@ -516,7 +516,6 @@ impl SSSpSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use crate::graph::Graph;
     use crate::utils::VertexDistance;
 
@@ -552,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vertex_distance_ordering() {
+    fn vertex_distance_ordering() {
         let vd1 = VertexDistance::new(1, 3.0);
         let vd2 = VertexDistance::new(2, 2.0);
         let vd3 = VertexDistance::new(3, 2.0);
@@ -575,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn test_graph_creation() {
+    fn graph_creation() {
         let graph = create_simple_graph();
         assert_eq!(graph.vertices, 4);
         assert_eq!(graph.edge_count(), 5);
@@ -587,7 +586,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dijkstra_single_path() {
+    fn dijkstra_single_path() {
         let graph = create_simple_graph();
         let mut solver = SSSpSolver::new(graph);
 
@@ -600,7 +599,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dijkstra_unreachable() {
+    fn dijkstra_unreachable() {
         let mut graph = Graph::new(3);
         graph.add_edge(0, 1, 1.0);
         // Vertex 2 is unreachable from 0
@@ -611,7 +610,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dijkstra_all_distances() {
+    fn dijkstra_all_distances() {
         let graph = create_simple_graph();
         let mut solver = SSSpSolver::new(graph);
 
@@ -624,7 +623,7 @@ mod tests {
     }
 
     #[test]
-    fn test_duan_mao_vs_dijkstra() {
+    fn duan_mao_vs_dijkstra() {
         let graph = create_larger_graph();
 
         // Test with Dijkstra
@@ -644,7 +643,7 @@ mod tests {
     }
 
     #[test]
-    fn test_solve_method() {
+    fn solve_method() {
         let graph = create_simple_graph();
         let mut solver = SSSpSolver::new(graph);
 
@@ -657,7 +656,7 @@ mod tests {
     }
 
     #[test]
-    fn test_state_reset() {
+    fn state_reset() {
         let graph = create_simple_graph();
         let mut solver = SSSpSolver::new(graph);
 
@@ -674,7 +673,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_pivots() {
+    fn find_pivots() {
         let graph = create_larger_graph();
         let mut solver = SSSpSolver::new(graph);
 
@@ -693,7 +692,7 @@ mod tests {
     }
 
     #[test]
-    fn test_base_case() {
+    fn base_case() {
         let graph = create_simple_graph();
         let mut solver = SSSpSolver::new(graph);
 
@@ -708,7 +707,7 @@ mod tests {
     }
 
     #[test]
-    fn test_adaptive_data_structure() {
+    fn adaptive_data_structure() {
         let mut ads = AdaptiveDataStructure::new(3, 10.0);
 
         ads.insert(1, 5.0);
@@ -726,7 +725,7 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_prepend() {
+    fn batch_prepend() {
         let mut ads = AdaptiveDataStructure::new(5, 10.0);
 
         let items = vec![(1, 2.0), (2, 4.0), (3, 1.0)];
@@ -739,7 +738,7 @@ mod tests {
     }
 
     #[test]
-    fn test_negative_weights_not_supported() {
+    fn negative_weights_not_supported() {
         // This implementation assumes non-negative weights
         // Testing that it doesn't crash with negative weights
         let mut graph = Graph::new(3);
@@ -752,7 +751,7 @@ mod tests {
     }
 
     #[test]
-    fn test_self_loops() {
+    fn self_loops() {
         let mut graph = Graph::new(2);
         graph.add_edge(0, 0, 1.0); // Self-loop
         graph.add_edge(0, 1, 2.0);
@@ -767,7 +766,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zero_weight_edges() {
+    fn zero_weight_edges() {
         let mut graph = Graph::new(3);
         graph.add_edge(0, 1, 0.0);
         graph.add_edge(1, 2, 0.0);
