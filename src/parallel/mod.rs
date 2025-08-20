@@ -53,6 +53,15 @@ impl ParallelSSSpSolver {
         }
     }
 
+    pub fn solve(&self, source: usize, goal: usize) -> Option<(f64, Vec<usize>)> {
+        self.solve_all(source);
+        if self.distances[goal].load(Ordering::Relaxed) == INFINITY {
+            None
+        } else {
+            Some((self.distances[goal].load(Ordering::Relaxed), self.reconstruct_path(source, goal)))
+        }
+    }
+
     pub fn solve_all(&self, source: usize) -> HashMap<usize, f64> {
         // Reset state
         self.reset_state();
@@ -608,6 +617,25 @@ impl ParallelSSSpSolver {
         } else {
             pivots
         }
+    }
+
+    fn reconstruct_path(&self, source: usize, goal: usize) -> Vec<usize> {
+        let mut path = Vec::new();
+        let mut current = goal;
+
+        while current != source {
+            path.push(current);
+            let pred = self.predecessors[current].load(Ordering::Relaxed);
+            if pred != usize::MAX {
+                current = pred;
+            } else {
+                return Vec::new();
+            }
+        }
+
+        path.push(source);
+        path.reverse();
+        path
     }
 }
 

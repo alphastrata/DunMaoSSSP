@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use fast_sssp::Graph;
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;
@@ -5,7 +7,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-#[allow(dead_code)]
 pub fn read_dimacs_graph_for_petgraph(
     path: &Path,
 ) -> (DiGraph<(), f64>, HashMap<usize, NodeIndex>) {

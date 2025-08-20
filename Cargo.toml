@@ -22,9 +22,7 @@ name = "fast_sssp"
 [features]
 default = []
 hashbrown = ["dep:hashbrown"]
-parallel_pivot = []
-parallel_frontier_expansion = []
-parallel_edge_relaxation = []
+parallel = ["dep:crossbeam"]
 simd_edge_relaxation = []
 full = [
     "bincode",
@@ -34,9 +32,10 @@ full = [
     "env_logger",
     "reqwest",
     "hashbrown",
-    "parallel_pivot",
-    "parallel_frontier_expansion",
-    "parallel_edge_relaxation",
+    "parallel",
+    # "parallel_pivot",
+    # "parallel_frontier_expansion",
+    # "parallel_edge_relaxation",
 ]
 bincode = ["dep:bincode", "serde"]
 serde = ["dep:serde"]
@@ -54,7 +53,7 @@ log = { version = "0.4.27", optional = true }
 env_logger = { version = "0.11.8", optional = true }
 bit-vec = "0.8.0"
 hashbrown = { version = "0.15.5", features = ["rayon"], optional = true }
-crossbeam = "0.8.4"
+crossbeam = { version = "0.8.4", optional = true }
 
 [dev-dependencies]
 criterion = "0.7.0"
@@ -66,10 +65,11 @@ name = "rome"
 harness = false
 required-features = ["full"]
 
-[[bench]]
-name = "wiki"
-harness = false
-required-features = ["full"]
+# The wikipedia graph is SIGNIFICANTLY bigger than the Rome graph, enable and run with caution.
+# [[bench]]
+# name = "wiki"
+# harness = false
+# required-features = ["full"]
 
 
 [[example]]

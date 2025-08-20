@@ -20,9 +20,8 @@ fn run_fast_sssp_sequential(graph: &Graph, pairs: &[(usize, usize)]) {
 
 fn run_fast_sssp_parallel(graph: &Graph, pairs: &[(usize, usize)], num_threads: usize) {
     let solver = ParallelSSSpSolver::new(graph.clone(), num_threads);
-    for (source, _goal) in pairs {
-        // solve_all is not the right method for a..b, but it is what is implemented
-        black_box(solver.solve_all(*source));
+    for (source, goal) in pairs {
+        black_box(solver.solve(*source, *goal));
     }
 }
 
@@ -41,7 +40,7 @@ fn benchmark(c: &mut Criterion) {
     let fast_sssp_graph = graph_loader::read_dimacs_graph_for_fast_sssp(&path);
     let (petgraph_graph, _) = graph_loader::read_dimacs_graph_for_petgraph(&path);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut nodes: Vec<usize> = (0..fast_sssp_graph.vertices).collect();
     nodes.shuffle(&mut rng);
     let pairs: Vec<(usize, usize)> = nodes
