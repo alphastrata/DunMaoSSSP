@@ -34,7 +34,7 @@ fn download_file(client: &Client, url: &str, path: &str) -> Result<(), Box<dyn s
         file.write_all(&buffer[..n])?;
         downloaded += n as u64;
 
-        if downloaded % (1024 * 1024) == 0 {
+        if downloaded.is_multiple_of(1024 * 1024) {
             println!(
                 "Downloaded: {:.1} MB",
                 downloaded as f64 / (1024.0 * 1024.0)

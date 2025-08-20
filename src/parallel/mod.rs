@@ -156,7 +156,7 @@ impl ParallelSSSpSolver {
             return self.sequential_bmssp(level, bound, pivots);
         }
 
-        let chunk_size = (pivots.len() + self.num_threads - 1) / self.num_threads;
+        let chunk_size = pivots.len().div_ceil(self.num_threads);
         let pivot_chunks: Vec<_> = pivots.chunks(chunk_size).collect();
 
         let (sender, receiver) = channel::unbounded();
@@ -220,7 +220,7 @@ impl ParallelSSSpSolver {
                 break;
             }
 
-            let (sub_bound, sub_result) = self.sequential_bmssp(level - 1, subset_bound, subset);
+            let (_sub_bound, sub_result) = self.sequential_bmssp(level - 1, subset_bound, subset);
 
             for &vertex in &sub_result {
                 self.complete[vertex].store(true, Ordering::Relaxed);
@@ -377,7 +377,7 @@ impl ParallelSSSpSolver {
                 }
             } else {
                 // Process in parallel
-                let chunk_size = (current_layer.len() + self.num_threads - 1) / self.num_threads;
+                let chunk_size = current_layer.len().div_ceil(self.num_threads);
                 let layer_chunks: Vec<_> = current_layer.chunks(chunk_size).collect();
 
                 let mut handles = Vec::new();
