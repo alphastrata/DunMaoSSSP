@@ -37,8 +37,8 @@ fn run_petgraph_dijkstra(graph: &DiGraph<(), f64>, pairs: &[(usize, usize)]) {
 
 fn benchmark(c: &mut Criterion) {
     let path = Path::new("tests/test_data/Rome99");
-    let fast_sssp_graph = graph_loader::read_dimacs_graph_for_fast_sssp(&path);
-    let (petgraph_graph, _) = graph_loader::read_dimacs_graph_for_petgraph(&path);
+    let fast_sssp_graph = graph_loader::read_dimacs_graph_for_fast_sssp(path);
+    let (petgraph_graph, _) = graph_loader::read_dimacs_graph_for_petgraph(path);
 
     let mut rng = rand::rng();
     let mut nodes: Vec<usize> = (0..fast_sssp_graph.vertices).collect();

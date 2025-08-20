@@ -1,4 +1,4 @@
-#![cfg(all(feature = "bincode"))]
+#![cfg(feature = "bincode")]
 
 use std::time::Instant;
 use std::{hint::black_box, path::Path};

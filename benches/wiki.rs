@@ -1,4 +1,4 @@
-#[cfg(all(feature = "parallel"))]
+#[cfg(feature = "parallel")]
 use criterion::{Criterion, criterion_group, criterion_main};
 use fast_sssp::graph::Graph;
 use fast_sssp::parallel::ParallelSSSpSolver;
@@ -26,6 +26,7 @@ fn run_fast_sssp_parallel(graph: &Graph, pairs: &[(usize, usize)], num_threads: 
     }
 }
 
+#[allow(dead_code)]
 fn run_petgraph_dijkstra(graph: &DiGraph<(), f64>, pairs: &[(usize, usize)]) {
     for (source, goal) in pairs {
         let source_node = graph.node_indices().find(|i| i.index() == *source).unwrap();
@@ -38,7 +39,7 @@ fn run_petgraph_dijkstra(graph: &DiGraph<(), f64>, pairs: &[(usize, usize)]) {
 
 fn benchmark(c: &mut Criterion) {
     let path = Path::new("data/wiki-talk-graph.bin");
-    let fast_sssp_graph = Graph::from_file(&path).unwrap();
+    let fast_sssp_graph = Graph::from_file(path).unwrap();
 
     let mut rng = rand::rng();
     let mut nodes: Vec<usize> = (0..fast_sssp_graph.vertices).collect();
