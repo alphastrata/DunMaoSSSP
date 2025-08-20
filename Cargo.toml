@@ -61,20 +61,15 @@ criterion = "0.7.0"
 petgraph = "0.8.2"
 rand = "0.9.2"
 
-# [[bench]]
-# harness = false
-# name = "bench"
-# path = "benches/sssp_benchmark.rs"
+[[bench]]
+name = "benches"
+harness = false
+required-features = ["full"]
 
-# [[bench]]
-# harness = false
-# name = "vs_petgraph_dijkstra"
-# path = "benches/vs_petgraph_dijkstra.rs"
-
-# [[example]]
-# name = "wiki_talk_benchmark"
-# path = "examples/wiki_talk.rs"
-# required-features = ["bincode"]
+[[example]]
+name = "wiki_talk_benchmark"
+path = "examples/wiki_talk.rs"
+required-features = ["bincode"]
 
 [[bin]]
 name = "fetch_data"
