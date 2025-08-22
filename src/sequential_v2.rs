@@ -4,12 +4,12 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
 pub struct DuanMaoSolverV2 {
-    graph: Graph,
-    distances: Vec<f64>,
-    predecessors: Vec<Option<usize>>,
-    complete: Vec<bool>,
-    k: usize,
-    t: usize,
+    pub graph: Graph,
+    pub distances: Vec<f64>,
+    pub predecessors: Vec<Option<usize>>,
+    pub complete: Vec<bool>,
+    pub k: usize,
+    pub t: usize,
 }
 
 impl DuanMaoSolverV2 {

@@ -9,6 +9,8 @@ pub mod utils;
 
 #[cfg(feature = "parallel")]
 pub mod parallel;
+#[cfg(feature = "parallel")]
+pub mod parallel_v2;
 
 #[cfg(feature = "petgraph")]
 pub mod petgraph_utils;

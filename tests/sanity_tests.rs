@@ -1,7 +1,7 @@
 mod graph_loader;
 
 use crate::graph_loader::{read_dimacs_graph_for_fast_sssp, read_dimacs_graph_for_petgraph};
-use fast_sssp::SSSpSolver;
+use fast_sssp::{DuanMaoSolverV2, SSSpSolver};
 use petgraph::algo::dijkstra;
 use std::collections::HashMap;
 use std::path::Path;
@@ -28,7 +28,7 @@ fn sanity_with_petgraph() {
     let petgraph_result = dijkstra(&petgraph, source_node, Some(goal_node), |e| *e.weight());
 
     // Your fast SSSP result
-    let mut fast_solver = SSSpSolver::new(fast_graph);
+    let mut fast_solver = DuanMaoSolverV2::new(fast_graph);
     let internal_source = convert_node_id_to_internal(source_node_id, &node_map);
     let internal_goal = convert_node_id_to_internal(goal_node_id, &node_map);
 
@@ -65,7 +65,7 @@ fn comprehensive_distance_comparison() {
         (500, 3353),
     ];
 
-    let mut fast_solver = SSSpSolver::new(fast_graph);
+    let mut fast_solver = DuanMaoSolverV2::new(fast_graph);
     let mut successful_tests = 0;
     let mut max_difference: f64 = 0.0;
 
@@ -142,6 +142,7 @@ fn comprehensive_distance_comparison() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn validate_all_distances_from_source() {
     let (petgraph, node_map) = read_dimacs_graph_for_petgraph(Path::new("tests/test_data/Rome99"));
     let fast_graph = read_dimacs_graph_for_fast_sssp(Path::new("tests/test_data/Rome99"));

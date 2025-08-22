@@ -3,7 +3,7 @@
 use std::time::Instant;
 use std::{hint::black_box, path::Path};
 
-use fast_sssp::{Graph, SSSpSolver};
+use fast_sssp::{DuanMaoSolverV2, Graph};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data_path = Path::new("data/wiki-talk-graph.bin");
@@ -37,8 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!("{}", "-".repeat(55));
 
-    let mut solver1 = SSSpSolver::new(graph.clone());
-    let mut solver2 = SSSpSolver::new(graph.clone());
+    let mut solver1 = DuanMaoSolverV2::new(graph.clone());
+    let mut solver2 = DuanMaoSolverV2::new(graph.clone());
 
     let test_sources = vec![0, 100, 1000, 5000];
 

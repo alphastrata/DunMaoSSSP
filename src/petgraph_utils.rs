@@ -16,7 +16,7 @@ where
 
     for node in graph.node_identifiers() {
         let idx = node_map.len();
-        node_map.insert(node.clone(), idx);
+        node_map.insert(node, idx);
         reverse_node_map.push(node);
     }
 
@@ -40,7 +40,7 @@ where
     } else {
         for (i, node_id) in reverse_node_map.iter().enumerate() {
             if let Some((dist, _)) = solver.solve(start_node_idx, i) {
-                result.insert(node_id.clone(), dist);
+                result.insert(*node_id, dist);
             }
         }
     }
