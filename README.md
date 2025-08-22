@@ -34,12 +34,12 @@ livejournal SSSP (V2)/petgraph_dijkstra
 
 ## When to Use This Algorithm (If you really must.. but you probably shouldn't)
 
-### ✅ Use When:
+### Use When:
 - **Large sparse directed graphs**: n > 10⁵, m ≈ n to n log n
 - **Repeated computations**: You solve SSSP frequently on similar graphs  
 - **Graph density ratio m/n is low**: Algorithm shines when m ≈ n
 
-### ❌ Avoid When:
+### Avoid When:
 - **Small graphs**: n < 10³ (Dijkstra ~will likely~ be faster)
 - **Dense graphs**: m ≈ n² (benefit diminishes significantly)
 - **One-off computations** on moderately sized graphs
@@ -70,9 +70,9 @@ livejournal SSSP (V2)/petgraph_dijkstra
 ## Requirements
 
 Your graph must be:
-- ✅ **Directed** (required)
-- ✅ **Non-negative real edge weights** (required)
-- ✅ **Single-source** (not all-pairs)
+- **Directed** (required)
+- **Non-negative real edge weights** (required)
+- **Single-source** (not all-pairs)
 
 ## Usage
 
@@ -108,10 +108,10 @@ cargo run bench -F full
 ## Implementation Notes
 
 This implementation includes:
-- **FindPivots algorithm**: Reduces frontier size by factor of log^Ω(1)(n)
-- **Block-based data structure**: From Lemma 3.3 supporting efficient Insert/BatchPrepend/Pull operations
-- **Recursive partitioning**: O(log n/t) levels with t = ⌊log^(2/3)(n)⌋
-- **Constant-degree transformation**: Converts arbitrary graphs as described in the paper
+- **FindPivots algorithm**
+- **Block-based data structure**
+- **Recursive partitioning**
+- **Constant-degree transformation**
 
 **Complexity vs. Benefit**: The big-O notation hides potentially large constant factors. The paper mentions "large constant C" in analysis, so practical benefits depend heavily on your specific graph characteristics.
 
@@ -122,7 +122,7 @@ This implementation includes:
 - [ ] Better error handling and edge cases
 - [ ] More comprehensive benchmarking suite
 - [ ] Reach a conclusion about v1 vs v2 
-- [ ] See if the parallel numbers can shine even brighter against the sequential v2 version.
+- [ ] See if the parallel numbers can shine even brighter against the sequential v2 version
 
 ## License
 
