@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use fast_sssp::graph::Graph;
 use fast_sssp::sequential::SSSpSolver;
