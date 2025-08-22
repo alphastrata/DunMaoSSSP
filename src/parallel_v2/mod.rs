@@ -3,14 +3,16 @@ use crate::utils::{INFINITY, VertexDistance};
 use crossbeam_utils::atomic::AtomicCell;
 use rayon::prelude::*;
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, HashSet, VecDeque};
 use std::sync::Mutex;
+use std::sync::{Arc, MutexGuard};
+use std::thread_local;
 
 pub struct ParDuanMaoSolverV2 {
     pub graph: Graph,
     pub distances: Vec<AtomicCell<f64>>,
     pub predecessors: Vec<Mutex<Option<usize>>>,
-    pub complete: Vec<bool>,
+    pub complete: Vec<AtomicCell<bool>>,
     pub k: usize,
     pub t: usize,
 }
@@ -24,7 +26,7 @@ impl ParDuanMaoSolverV2 {
         Self {
             distances: (0..n).map(|_| AtomicCell::new(INFINITY)).collect(),
             predecessors: (0..n).map(|_| Mutex::new(None)).collect(),
-            complete: vec![false; n],
+            complete: (0..n).map(|_| AtomicCell::new(false)).collect(),
             graph,
             k: k.max(3),
             t: t.max(2),
@@ -32,9 +34,6 @@ impl ParDuanMaoSolverV2 {
     }
 
     pub fn solve(&mut self, source: usize, goal: usize) -> Option<(f64, Vec<usize>)> {
-        if self.graph.vertices < 50_000 || self.graph.edge_count() < 200_000 {
-            return self.dijkstra_fallback(source, goal);
-        }
         self.solve_duan_mao(source, goal)
     }
 
@@ -53,33 +52,6 @@ impl ParDuanMaoSolverV2 {
         }
     }
 
-    fn dijkstra_fallback(&mut self, source: usize, goal: usize) -> Option<(f64, Vec<usize>)> {
-        self.reset_state();
-        self.distances[source].store(0.0);
-
-        let mut heap = BinaryHeap::new();
-        heap.push(Reverse(VertexDistance::new(source, 0.0)));
-
-        while let Some(Reverse(VertexDistance { vertex, distance })) = heap.pop() {
-            if distance > self.distances[vertex].load() {
-                continue;
-            }
-            if vertex == goal {
-                return Some((distance, self.reconstruct_path(source, goal)));
-            }
-
-            for edge in &self.graph.edges[vertex] {
-                let new_dist = distance + edge.weight;
-                if new_dist < self.distances[edge.to].load() {
-                    self.distances[edge.to].store(new_dist);
-                    *self.predecessors[edge.to].lock().unwrap() = Some(vertex);
-                    heap.push(Reverse(VertexDistance::new(edge.to, new_dist)));
-                }
-            }
-        }
-        None
-    }
-
     fn reset_state(&mut self) {
         for d in &self.distances {
             d.store(INFINITY);
@@ -87,7 +59,9 @@ impl ParDuanMaoSolverV2 {
         for p in &self.predecessors {
             *p.lock().unwrap() = None;
         }
-        self.complete.fill(false);
+        for c in &self.complete {
+            c.store(false);
+        }
     }
 
     fn bmssp2(
@@ -102,7 +76,7 @@ impl ParDuanMaoSolverV2 {
         }
 
         if let Some(g) = goal
-            && self.complete[g]
+            && self.complete[g].load()
         {
             return (bound, Vec::new());
         }
@@ -133,7 +107,7 @@ impl ParDuanMaoSolverV2 {
 
         while result_set.len() < max_result_size && !data_structure.is_empty() {
             if let Some(g) = goal
-                && self.complete[g]
+                && self.complete[g].load()
             {
                 break;
             }
@@ -147,7 +121,7 @@ impl ParDuanMaoSolverV2 {
             let (sub_bound, sub_result) = self.bmssp2(level - 1, subset_bound, subset, goal);
             result_set.extend(&sub_result);
 
-            self.edge_relaxation2(&sub_result, subset_bound, bound, &mut data_structure);
+            self.edge_relaxation2_parallel(&sub_result, subset_bound, bound, &mut data_structure);
             current_bound = current_bound.min(sub_bound);
         }
 
@@ -166,7 +140,7 @@ impl ParDuanMaoSolverV2 {
 
         let mut heap = BinaryHeap::new();
         for &start_node in &frontier {
-            self.complete[start_node] = true;
+            self.complete[start_node].store(true);
             let dist = self.distances[start_node].load();
             if dist < bound {
                 heap.push(Reverse(VertexDistance::new(start_node, dist)));
@@ -209,46 +183,6 @@ impl ParDuanMaoSolverV2 {
         (bound, result)
     }
 
-    fn find_pivots2(&mut self, bound: f64, frontier: &[usize]) -> (Vec<usize>, Vec<usize>) {
-        find_pivots2_parallel(
-            &self.graph,
-            &self.distances,
-            &self.predecessors,
-            self.k,
-            bound,
-            frontier,
-        )
-    }
-
-    fn edge_relaxation2(
-        &mut self,
-        completed_vertices: &[usize],
-        lower_bound: f64,
-        upper_bound: f64,
-        data_structure: &mut EfficientDataStructure,
-    ) {
-        let mut batch_prepend_list = Vec::new();
-        for &u in completed_vertices {
-            self.complete[u] = true;
-            let u_dist = self.distances[u].load();
-            for edge in &self.graph.edges[u] {
-                let v = edge.to;
-                let new_dist = u_dist + edge.weight;
-                let current_dist = self.distances[v].load();
-                if new_dist < current_dist {
-                    self.distances[v].store(new_dist);
-                    *self.predecessors[v].lock().unwrap() = Some(u);
-                    if new_dist >= lower_bound && new_dist < upper_bound {
-                        data_structure.insert(v, new_dist);
-                    } else if new_dist < lower_bound {
-                        batch_prepend_list.push((v, new_dist));
-                    }
-                }
-            }
-        }
-        data_structure.batch_prepend(batch_prepend_list);
-    }
-
     fn reconstruct_path(&self, source: usize, goal: usize) -> Vec<usize> {
         let mut path = Vec::new();
         let mut current = goal;
@@ -265,144 +199,144 @@ impl ParDuanMaoSolverV2 {
         path.reverse();
         path
     }
-}
 
-fn find_pivots2_parallel(
-    graph: &Graph,
-    distances: &[AtomicCell<f64>],
-    predecessors: &[Mutex<Option<usize>>],
-    k: usize,
-    bound: f64,
-    frontier: &[usize],
-) -> (Vec<usize>, Vec<usize>) {
-    let mut working_set: HashSet<usize> = frontier.iter().copied().collect();
-    let mut current_layer: Vec<usize> = frontier.to_vec();
+    fn find_pivots2(&mut self, bound: f64, frontier: &[usize]) -> (Vec<usize>, Vec<usize>) {
+        // Parallel BFS exploration with work stealing
+        let mut working_set: Vec<usize> = Vec::with_capacity(self.k * frontier.len() * 2);
+        working_set.extend_from_slice(frontier);
 
-    for _ in 0..k {
-        if current_layer.is_empty() {
-            break;
+        let explored = Arc::new(Mutex::new(HashSet::new()));
+        for &node in frontier {
+            explored.lock().unwrap().insert(node);
         }
 
-        // Collect all potential updates in parallel
-        let updates: Vec<(usize, f64, usize)> = current_layer
-            .par_iter()
-            .flat_map(|&u| {
-                let u_dist = distances[u].load();
-                graph.edges[u]
-                    .iter()
-                    .filter_map(move |edge| {
+        // Parallel exploration for k levels
+        for level in 0..self.k {
+            if working_set.is_empty() {
+                break;
+            }
+
+            // Process current level in parallel
+            let new_nodes: Vec<usize> = working_set
+                .par_iter()
+                .flat_map(|&u| {
+                    let u_dist = self.distances[u].load();
+                    let mut local_new = Vec::new();
+
+                    for edge in &self.graph.edges[u] {
                         let v = edge.to;
                         let new_dist = u_dist + edge.weight;
-                        if new_dist < distances[v].load() && new_dist < bound {
-                            Some((v, new_dist, u))
-                        } else {
-                            None
+                        let current_dist = self.distances[v].load();
+
+                        if new_dist < current_dist && new_dist < bound {
+                            // Use optimistic update without CAS
+                            if new_dist < self.distances[v].fetch_min(new_dist) {
+                                *self.predecessors[v].lock().unwrap() = Some(u);
+
+                                let mut explored_lock = explored.lock().unwrap();
+                                if explored_lock.insert(v) {
+                                    local_new.push(v);
+                                }
+                            }
                         }
-                    })
-                    .collect::<Vec<_>>()
+                    }
+                    local_new
+                })
+                .collect();
+
+            working_set = new_nodes;
+
+            if working_set.len() > self.k * frontier.len() {
+                break;
+            }
+        }
+
+        let explored_set = explored.lock().unwrap().clone();
+        (frontier.to_vec(), explored_set.into_iter().collect())
+    }
+
+    fn edge_relaxation2_parallel(
+        &mut self,
+        completed_vertices: &[usize],
+        lower_bound: f64,
+        upper_bound: f64,
+        data_structure: &mut EfficientDataStructure,
+    ) {
+        // Batch processing with minimal synchronization
+        let batches: Vec<(Vec<(usize, f64)>, Vec<(usize, f64)>)> = completed_vertices
+            .par_chunks(rayon::current_num_threads() * 4)
+            .map(|chunk| {
+                let mut batch = Vec::new();
+                let mut prepend_batch = Vec::new();
+
+                for &u in chunk {
+                    self.complete[u].store(true);
+                    let u_dist = self.distances[u].load();
+
+                    for edge in &self.graph.edges[u] {
+                        let v = edge.to;
+                        let new_dist = u_dist + edge.weight;
+                        let current_dist = self.distances[v].load();
+
+                        if new_dist < current_dist {
+                            // Simple store - let the fastest thread win
+                            self.distances[v].store(new_dist);
+                            *self.predecessors[v].lock().unwrap() = Some(u);
+
+                            if new_dist >= lower_bound && new_dist < upper_bound {
+                                batch.push((v, new_dist));
+                            } else if new_dist < lower_bound {
+                                prepend_batch.push((v, new_dist));
+                            }
+                        }
+                    }
+                }
+
+                // Return both batches as a tuple
+                (batch, prepend_batch)
             })
             .collect();
 
-        // Apply updates sequentially to avoid race conditions
-        let mut next_layer = HashSet::new();
-        for (v, new_dist, u) in updates {
-            if new_dist < distances[v].load() {
-                distances[v].store(new_dist);
-                *predecessors[v].lock().unwrap() = Some(u);
+        // Merge results
+        let mut all_batches = Vec::new();
+        let mut all_prepends = Vec::new();
 
-                if working_set.insert(v) {
-                    next_layer.insert(v);
-                }
-            }
+        for (batch, prepend_batch) in batches {
+            all_batches.extend(batch);
+            all_prepends.extend(prepend_batch);
         }
 
-        if working_set.len() > k * frontier.len() {
-            return (frontier.to_vec(), working_set.into_iter().collect());
+        // Bulk insert
+        for (v, dist) in all_batches {
+            data_structure.insert(v, dist);
         }
 
-        current_layer = next_layer.into_iter().collect();
+        if !all_prepends.is_empty() {
+            data_structure.batch_prepend(all_prepends);
+        }
     }
-
-    select_pivots_from_working_set(predecessors, k, frontier, &working_set)
 }
 
-fn select_pivots_from_working_set(
-    predecessors: &[Mutex<Option<usize>>],
-    k: usize,
-    frontier: &[usize],
-    working_set: &HashSet<usize>,
-) -> (Vec<usize>, Vec<usize>) {
-    // Calculate subtree sizes
-    let mut subtree_sizes: HashMap<usize, usize> = HashMap::new();
-
-    // Build a tree structure from predecessors
-    let mut children: HashMap<usize, Vec<usize>> = HashMap::new();
-    for &node in working_set {
-        if let Some(parent) = *predecessors[node].lock().unwrap()
-            && working_set.contains(&parent)
-        {
-            children.entry(parent).or_default().push(node);
-        }
-    }
-
-    // Calculate subtree sizes using DFS
-    let mut stack: Vec<usize> = Vec::new();
-    let mut visited = HashSet::new();
-
-    // Start DFS from all nodes that have no children (leaves)
-    for &node in working_set {
-        if children.get(&node).is_none_or(|c| c.is_empty()) {
-            stack.push(node);
-        }
-    }
-
-    while let Some(node) = stack.pop() {
-        if visited.contains(&node) {
-            continue;
-        }
-
-        let mut size = 1;
-        let mut all_children_visited = true;
-
-        if let Some(children_list) = children.get(&node) {
-            for &child in children_list {
-                if let Some(child_size) = subtree_sizes.get(&child) {
-                    size += child_size;
-                } else {
-                    all_children_visited = false;
-                    stack.push(node);
-                    stack.push(child);
-                    break;
-                }
+trait AtomicF64Ext {
+    fn fetch_min(&self, new_val: f64) -> f64;
+}
+impl AtomicF64Ext for AtomicCell<f64> {
+    fn fetch_min(&self, new_val: f64) -> f64 {
+        self.fetch_update(|current| {
+            if new_val < current {
+                Some(new_val)
+            } else {
+                None // Don't update
             }
-        }
-
-        if all_children_visited {
-            subtree_sizes.insert(node, size);
-            visited.insert(node);
-        }
+        })
+        .unwrap_or_else(|current| current)
     }
-
-    // Select pivots: frontier nodes with subtree size >= k
-    let pivots: Vec<usize> = frontier
-        .iter()
-        .filter(|&&root| subtree_sizes.get(&root).is_some_and(|&size| size >= k))
-        .copied()
-        .collect();
-
-    let final_pivots = if pivots.is_empty() {
-        frontier.to_vec()
-    } else {
-        pivots
-    };
-
-    (final_pivots, working_set.iter().copied().collect())
 }
 
-// EfficientDataStructure remains the same as in your sequential version
+// EfficientDataStructure remains mostly the same, but optimized for parallel access
 pub struct EfficientDataStructure {
-    batch_blocks: VecDeque<Vec<(usize, f64)>>,
-    sorted_blocks: Vec<Vec<(usize, f64)>>,
+    batch_blocks: Mutex<VecDeque<Vec<(usize, f64)>>>,
+    sorted_blocks: Mutex<Vec<Vec<(usize, f64)>>>,
     block_size: usize,
     bound: f64,
 }
@@ -410,8 +344,8 @@ pub struct EfficientDataStructure {
 impl EfficientDataStructure {
     pub fn new(block_size: usize, bound: f64) -> Self {
         Self {
-            batch_blocks: VecDeque::new(),
-            sorted_blocks: Vec::new(),
+            batch_blocks: Mutex::new(VecDeque::new()),
+            sorted_blocks: Mutex::new(Vec::new()),
             block_size,
             bound,
         }
@@ -419,34 +353,33 @@ impl EfficientDataStructure {
 
     pub fn insert(&mut self, vertex: usize, distance: f64) {
         if distance < self.bound {
-            if self.sorted_blocks.is_empty()
-                || self.sorted_blocks.last().unwrap().len() >= self.block_size
-            {
-                self.sorted_blocks.push(Vec::with_capacity(self.block_size));
+            let mut sorted_blocks = self.sorted_blocks.lock().unwrap();
+            if sorted_blocks.is_empty() || sorted_blocks.last().unwrap().len() >= self.block_size {
+                sorted_blocks.push(Vec::with_capacity(self.block_size));
             }
-            self.sorted_blocks
-                .last_mut()
-                .unwrap()
-                .push((vertex, distance));
+            sorted_blocks.last_mut().unwrap().push((vertex, distance));
         }
     }
 
     pub fn batch_prepend(&mut self, items: Vec<(usize, f64)>) {
         if !items.is_empty() {
-            self.batch_blocks.push_back(items);
+            let mut batch_blocks = self.batch_blocks.lock().unwrap();
+            batch_blocks.push_back(items);
         }
     }
 
     pub fn pull(&mut self) -> (f64, Vec<usize>) {
-        if let Some(mut block) = self.batch_blocks.pop_front() {
-            block.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        // Try batch blocks first
+        if let Some(mut block) = self.batch_blocks.lock().unwrap().pop_front() {
+            block.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
             let vertices = block.into_iter().map(|(v, _)| v).collect();
             let min_dist = self.peek_min().unwrap_or(self.bound);
             return (min_dist, vertices);
         }
 
-        if let Some(mut block) = self.sorted_blocks.pop() {
-            block.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        // Then try sorted blocks
+        if let Some(mut block) = self.sorted_blocks.lock().unwrap().pop() {
+            block.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
             let vertices = block.into_iter().map(|(v, _)| v).collect();
             let min_dist = self.peek_min().unwrap_or(self.bound);
             return (min_dist, vertices);
@@ -456,18 +389,21 @@ impl EfficientDataStructure {
     }
 
     fn peek_min(&self) -> Option<f64> {
-        let batch_min = self
-            .batch_blocks
+        let batch_blocks = self.batch_blocks.lock().unwrap();
+        let sorted_blocks = self.sorted_blocks.lock().unwrap();
+
+        let batch_min = batch_blocks
             .iter()
             .flat_map(|b| b.iter())
             .map(|(_, d)| *d)
             .fold(f64::INFINITY, f64::min);
-        let sorted_min = self
-            .sorted_blocks
+
+        let sorted_min = sorted_blocks
             .iter()
             .flat_map(|b| b.iter())
             .map(|(_, d)| *d)
             .fold(f64::INFINITY, f64::min);
+
         let min = batch_min.min(sorted_min);
         if min == f64::INFINITY {
             None
@@ -477,7 +413,9 @@ impl EfficientDataStructure {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.batch_blocks.is_empty() && self.sorted_blocks.is_empty()
+        let batch_blocks = self.batch_blocks.lock().unwrap();
+        let sorted_blocks = self.sorted_blocks.lock().unwrap();
+        batch_blocks.is_empty() && sorted_blocks.is_empty()
     }
 }
 
@@ -518,6 +456,7 @@ fn validate_parallel_correctness() {
         let mut parallel_solver = ParDuanMaoSolverV2::new(graph.clone());
         let parallel_result = parallel_solver.solve(source, goal).unwrap();
 
+        assert_eq!(sequential_result.0, parallel_result.0);
         assert_eq!(sequential_result.1.len(), parallel_result.1.len());
     }
 }
