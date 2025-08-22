@@ -1,8 +1,8 @@
 #[cfg(feature = "parallel")]
 use criterion::{Criterion, criterion_group, criterion_main};
+use fast_sssp::DuanMaoSolverV2;
 use fast_sssp::graph::Graph;
 use fast_sssp::parallel::ParallelSSSpSolver;
-use fast_sssp::sequential::SSSpSolver;
 use petgraph::algo::dijkstra;
 use petgraph::graph::DiGraph;
 use rand::seq::SliceRandom;
@@ -13,7 +13,7 @@ use std::path::Path;
 mod graph_loader;
 
 fn run_fast_sssp_sequential(graph: &Graph, pairs: &[(usize, usize)]) {
-    let mut solver = SSSpSolver::new(graph.clone());
+    let mut solver = DuanMaoSolverV2::new(graph.clone());
     for (source, goal) in pairs {
         black_box(solver.solve(*source, *goal));
     }
