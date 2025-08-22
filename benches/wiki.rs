@@ -47,7 +47,7 @@ fn benchmark(c: &mut Criterion) {
     let pairs: Vec<(usize, usize)> = nodes
         .chunks(2)
         .map(|chunk| (chunk[0], chunk[1]))
-        .take(100)
+        .take(10)
         .collect();
 
     let mut group = c.benchmark_group("WikiTalk SSSP");
