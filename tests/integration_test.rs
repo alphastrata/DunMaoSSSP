@@ -1,12 +1,12 @@
 mod graph_loader;
-use fast_sssp::SSSpSolver;
+use fast_sssp::DuanMaoSolverV2;
 use graph_loader::read_dimacs_graph_for_fast_sssp;
 use std::path::Path;
 
 #[test]
 fn sssp_from_file() {
     let graph = read_dimacs_graph_for_fast_sssp(Path::new("tests/test_data/Rome99"));
-    let mut solver = SSSpSolver::new(graph);
+    let mut solver = DuanMaoSolverV2::new(graph);
     // Find a path to a node we know is reachable
     let result = solver.solve(0, 3352);
 
