@@ -65,6 +65,7 @@ criterion = "0.7.0"
 petgraph = "0.8.2"
 rand = "0.9.2"
 
+
 [[bench]]
 name = "rome"
 harness = false
@@ -85,17 +86,26 @@ name = "v1_vs_v2"
 harness = false
 required-features = ["full"]
 
+[[bench]]
+name = "rome_parallel"
+harness = false
+required-features = ["full"]
+
+[[bench]]
+name = "wiki_parallel"
+harness = false
+required-features = ["full"]
+
+[[bench]]
+name = "livejournal_parallel"
+harness = false
+required-features = ["full"]
+
 # The wikipedia graph is SIGNIFICANTLY bigger than the Rome graph, enable and run with caution.
 # [[bench]]
 # name = "wiki"
 # harness = false
 # required-features = ["full"]
-
-
-[[example]]
-name = "wiki_talk_benchmark"
-path = "examples/wiki_talk.rs"
-required-features = ["bincode"]
 
 [[bin]]
 name = "fetch_data"

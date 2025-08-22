@@ -7,8 +7,10 @@ pub mod sequential;
 pub mod sequential_v2;
 pub mod utils;
 
+#[deprecated(note = "use parallel_v2!")]
 #[cfg(feature = "parallel")]
 pub mod parallel;
+
 #[cfg(feature = "parallel")]
 pub mod parallel_v2;
 
