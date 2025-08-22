@@ -78,6 +78,11 @@ name = "livejournal"
 harness = false
 required-features = ["full"]
 
+[[bench]]
+name = "v1_vs_v2"
+harness = false
+required-features = ["full"]
+
 # The wikipedia graph is SIGNIFICANTLY bigger than the Rome graph, enable and run with caution.
 # [[bench]]
 # name = "wiki"
