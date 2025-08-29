@@ -21,22 +21,21 @@ name = "fast_sssp"
 
 [features]
 default = ["full"]
-hashbrown = ["dep:hashbrown"]
+ahash = ["dep:ahash"]
 parallel = ["dep:crossbeam", "dep:rayon", "dep:crossbeam-utils"]
 simd_edge_relaxation = []
 full = [
-    "bincode",
-    "serde",
-    "flate2",
-    "log",
-    "env_logger",
-    "reqwest",
-    "hashbrown",
-    "parallel",
-    "petgraph",
-    # "parallel_pivot",
-    # "parallel_frontier_expansion",
-    # "parallel_edge_relaxation",
+  "bincode",
+  "serde",
+  "flate2",
+  "log",
+  "env_logger",
+  "reqwest",
+  "parallel",
+  "petgraph",
+  # "parallel_pivot",
+  # "parallel_frontier_expansion",
+  # "parallel_edge_relaxation",
 ]
 bincode = ["dep:bincode", "serde"]
 serde = ["dep:serde"]
@@ -47,6 +46,7 @@ reqwest = ["dep:reqwest"]
 petgraph = ["dep:petgraph"]
 
 [dependencies]
+ahash = { version = "0.8.12", optional = true }
 reqwest = { version = "0.12.23", features = ["blocking"], optional = true }
 bincode = { version = "2.0.1", features = ["serde"], optional = true }
 serde = { version = "1.0.219", features = ["derive"], optional = true }
@@ -66,25 +66,25 @@ petgraph = "0.8.2"
 rand = "0.9.2"
 
 
-# [[bench]]
-# name = "rome"
-# harness = false
-# required-features = ["full"]
+[[bench]]
+name = "rome"
+harness = false
+required-features = ["full"]
 
-# [[bench]]
-# name = "wiki2"
-# harness = false
-# required-features = ["full"]
+[[bench]]
+name = "wiki2"
+harness = false
+required-features = ["full"]
 
-# [[bench]]
-# name = "livejournal"
-# harness = false
-# required-features = ["full"]
+[[bench]]
+name = "livejournal"
+harness = false
+required-features = ["full"]
 
-# [[bench]]
-# name = "v1_vs_v2"
-# harness = false
-# required-features = ["full"]
+[[bench]]
+name = "v1_vs_v2"
+harness = false
+required-features = ["full"]
 
 # [[bench]]
 # name = "rome_parallel"
