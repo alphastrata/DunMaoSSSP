@@ -1,5 +1,5 @@
 [package]
-name = "fast_sssp"
+name = "DunMaoSSSP"
 version = "0.1.0"
 edition = "2024"
 authors = ["jeremy webb <alphastrata@gmail.com>"]
@@ -7,14 +7,8 @@ license = "MIT"
 description = """
 # About:
 A naive impl of an SSSP algorithm from the 2025 ["Breaking the Sorting Barrier for Directed Single-Source Shortest Paths"](https://arxiv.org/abs/2504.17033) by Duan, Mao, Mao, Shu, and Yin (2025). 
-
-## Paper claims:
-
-- **Time Complexity**: O(m log^(2/3) n)
-- **Space Complexity**: O(n + m)
-- **Best for**: Sparse directed graphs where breaking the sorting barrier matters
-- **Practical use**: Currently more of theoretical interest; Dijkstra may be faster in practice
 """
+publish = false
 
 [lib]
 name = "fast_sssp"
@@ -33,6 +27,7 @@ full = [
   "reqwest",
   "parallel",
   "petgraph",
+  # Ideas for improvement, not implemented currently...
   # "parallel_pivot",
   # "parallel_frontier_expansion",
   # "parallel_edge_relaxation",
